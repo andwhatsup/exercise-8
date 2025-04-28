@@ -1,7 +1,7 @@
 // organization agent
 
 /* Initial beliefs and rules */
-org_name("lab_monitoring_org"). // the agent beliefs that it can manage organizations with the id "lab_monitoting_org"
+org_name("lab_monitoring_org"). // the agent beliefs that it can manage organizations with the id "lab_monitoring_org"
 group_name("monitoring_team"). // the agent beliefs that it can manage groups with the id "monitoring_team"
 sch_name("monitoring_scheme"). // the agent beliefs that it can manage schemes with the id "monitoring_scheme"
 
@@ -16,9 +16,28 @@ sch_name("monitoring_scheme"). // the agent beliefs that it can manage schemes w
 */
 @start_plan
 +!start : org_name(OrgName) & group_name(GroupName) & sch_name(SchemeName) <-
-  .print("Hello world").
+  .print("Hello world");
+  .print("Initializing organization ", OrgName);
+  createWorkspace(OrgName);
+  joinWorkspace(OrgName, W);
+  .print("Created and joined workspace ", OrgName, " (id: ", W, ")");
 
-/* 
+  makeArtifact("orgBoard","ora4mas.nopl.OrgBoard",["src/org/org-spec.xml"],OrgBoard)[wid(W)];
+  focus(OrgBoard);
+  .print("OrgBoard artifact created: ", OrgBoard);
+
+  createGroup(GroupName, GroupName, GB)[artifact_id(OrgBoard)];
+  focus(GB);
+  .print("GroupBoard artifact created: ", GB);
+
+  createScheme(SchemeName, SchemeName, SB)[artifact_id(OrgBoard)];
+  focus(SB);
+  .print("SchemeBoard artifact created: ", SB);
+
+  .broadcast(tell, workspaceAvailable(OrgName, W));
+  .print("Broadcasted new workspace: ", OrgName).
+
+  /* 
  * Plan for reacting to the addition of the test-goal ?formationStatus(ok)
  * Triggering event: addition of goal ?formationStatus(ok)
  * Context: the agent beliefs that there exists a group G whose formation status is being tested
@@ -26,10 +45,10 @@ sch_name("monitoring_scheme"). // the agent beliefs that it can manage schemes w
  * the agent waits until the belief is added in the belief base
 */
 @test_formation_status_is_ok_plan
-+?formationStatus(ok)[artifact_id(G)] : group(GroupName,_,G)[artifact_id(OrgName)] <-
-  .print("Waiting for group ", GroupName," to become well-formed");
-  .wait({+formationStatus(ok)[artifact_id(G)]}). // waits until the belief is added in the belief base
-
++formationStatus(ok)[artifact_id(G)] : org_name(OrgName) & group(GroupName, _, G)[artifact_id(OrgName)] & sch_name(SchemeName) <-
+  .print("Group ", GroupName, " is well-formed; assigning scheme ", SchemeName);
+  addScheme(SchemeName)[artifact_id(G)];
+  .print("Assigned scheme ", SchemeName, " to group ", GroupName).
 /* 
  * Plan for reacting to the addition of the goal !inspect(OrganizationalArtifactId)
  * Triggering event: addition of goal !inspect(OrganizationalArtifactId)
