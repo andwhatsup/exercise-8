@@ -16,27 +16,29 @@ sch_name("monitoring_scheme"). // the agent beliefs that it can manage schemes w
 */
 @start_plan
 +!start : org_name(OrgName) & group_name(GroupName) & sch_name(SchemeName) <-
-  .print("Hello world");
-  .print("Initializing organization ", OrgName);
-  createWorkspace(OrgName);
-  joinWorkspace(OrgName, W);
-  .print("Created and joined workspace ", OrgName, " (id: ", W, ")");
+  .print("Initializing organization: ", OrgName);
+  createWorkspace(OrgName);                     // create a new Moise workspace
+  joinWorkspace(OrgName, WS);                   // join it and obtain workspace id WS
+  .print("Workspace '", OrgName, "' created, id: ", WS);
 
-  makeArtifact("orgBoard","ora4mas.nopl.OrgBoard",["src/org/org-spec.xml"],OrgBoard)[wid(W)];
+  // Create and focus on the OrgBoard artifact managing the spec
+  makeArtifact("orgBoard", "ora4mas.nopl.OrgBoard", ["src/org/org-spec.xml"], OrgBoard)[wid(WS)];
   focus(OrgBoard);
-  .print("OrgBoard artifact created: ", OrgBoard);
+  .print("OrgBoard artifact created and focused: ", OrgBoard);
 
-  createGroup(GroupName, GroupName, GB)[artifact_id(OrgBoard)];
-  focus(GB);
-  .print("GroupBoard artifact created: ", GB);
+  // Create and focus on the GroupBoard for the monitoring team
+  createGroup(GroupName, GroupName, GroupBoard)[artifact_id(OrgBoard)];
+  focus(GroupBoard);
+  .print("GroupBoard artifact created and focused: ", GroupBoard);
 
-  createScheme(SchemeName, SchemeName, SB)[artifact_id(OrgBoard)];
-  focus(SB);
-  .print("SchemeBoard artifact created: ", SB);
+  // Create and focus on the SchemeBoard for the monitoring scheme
+  createScheme(SchemeName, SchemeName, SchemeBoard)[artifact_id(OrgBoard)];
+  focus(SchemeBoard);
+  .print("SchemeBoard artifact created and focused: ", SchemeBoard);
 
-  .broadcast(tell, workspaceAvailable(OrgName, W));
-  .print("Broadcasted new workspace: ", OrgName).
-
+  // Notify all agents that the organization workspace is available
+  .broadcast(tell, workspaceAvailable(OrgName, WS));
+  .print("Broadcasted new workspace availability: ", OrgName).
   /* 
  * Plan for reacting to the addition of the test-goal ?formationStatus(ok)
  * Triggering event: addition of goal ?formationStatus(ok)
@@ -44,24 +46,11 @@ sch_name("monitoring_scheme"). // the agent beliefs that it can manage schemes w
  * Body: if the belief formationStatus(ok)[artifact_id(G)] is not already in the agents belief base
  * the agent waits until the belief is added in the belief base
 */
-@test_formation_status_is_ok_plan
-+formationStatus(ok)[artifact_id(G)] : org_name(OrgName) & group(GroupName, _, G)[artifact_id(OrgName)] & sch_name(SchemeName) <-
-  .print("Group ", GroupName, " is well-formed; assigning scheme ", SchemeName);
-  addScheme(SchemeName)[artifact_id(G)];
-  .print("Assigned scheme ", SchemeName, " to group ", GroupName).
-/* 
- * Plan for reacting to the addition of the goal !inspect(OrganizationalArtifactId)
- * Triggering event: addition of goal !inspect(OrganizationalArtifactId)
- * Context: true (the plan is always applicable)
- * Body: performs an action that launches a console for observing the organizational artifact 
- * identified by OrganizationalArtifactId
-*/
-@inspect_org_artifacts_plan
-+!inspect(OrganizationalArtifactId) : true <-
-  // performs an action that launches a console for observing the organizational artifact
-  // the action is offered as an operation by the superclass OrgArt (https://moise.sourceforge.net/doc/api/ora4mas/nopl/OrgArt.html)
-  debug(inspector_gui(on))[artifact_id(OrganizationalArtifactId)]. 
-
+@formation_ok_plan
++formationStatus(ok)[artifact_id(GroupBoard)] : org_name(OrgName) & group_name(GroupName) <-
+  .print("Group '", GroupName, "' is now well-formed.");
+  addScheme(SchemeName)[artifact_id(GroupBoard)];   // assign the scheme to the group
+  .print("Assigned scheme '", SchemeName, "' to group '", GroupName, "'.").
 /* 
  * Plan for reacting to the addition of the belief play(Ag, Role, GroupId)
  * Triggering event: addition of belief play(Ag, Role, GroupId)
