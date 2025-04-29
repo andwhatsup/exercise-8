@@ -2,7 +2,9 @@
 
 
 /* Initial beliefs and rules */
-
+org_name(lab_monitoring_org).
+group_name(monitoring_team).
+sch_name(monitoring_scheme).
 /* Initial goals */
 !start. // the agent has the goal to start
 
@@ -16,6 +18,29 @@
 +!start : true <-
 	.print("Hello world").
 
+
+/*
+ * Plan: react to new org workspace availability, join and observe artifacts, then adopt relevant role
+ */
+@workspace_available_plan
++workspaceAvailable(OrgName, W) : org_name(OrgName) <-
+    .print("sensing_agent: detected workspace available ", OrgName);
+    joinWorkspace(OrgName, W);
+    .print("sensing_agent: joined workspace ", OrgName, " (id: ", W, ")");
+
+    /* lookup and focus on OrgBoard*/
+    lookupArtifact("orgBoard", OrgBoard)[wid(W)];
+    focus(OrgBoard);
+    .print("sensing_agent: focused on OrgBoard ", OrgBoard);
+
+    /* lookup and focus on GroupBoard for monitoring_team*/
+    lookupArtifact("monitoring_team", GB)[artifact_id(OrgBoard)];
+    focus(GB);
+    .print("sensing_agent: focused on GroupBoard ", GB);
+
+    /* adopt the temperature_reader role in the group*/
+    adoptRole(temperature_reader)[artifact_id(GB)];
+    .print("sensing_agent: adopted role temperature_reader in group monitoring_team").
 /* 
  * Plan for reacting to the addition of the goal !read_temperature
  * Triggering event: addition of goal !read_temperature
