@@ -6,50 +6,53 @@ org_name("lab_monitoring_org").
 group_name("monitoring_team").
 sch_name("monitoring_scheme").
 
-/* Initial goal */
-!start.
+!start.  // kick off
 
 /* Plan: greet on start */
 @start_plan
 +!start : true <-
-    .print("acting_agent: ready").
+    .print("Hello world").
 
-/* Plan: handle available role announcements, join org, focus artifacts, and adopt the role */
+/* Plan: react to availableRole, join org, focus, adopt role, commit mission */
 @available_role_plan
-+availableRole(Role, OrgName) : org_name(OrgName) <-
-    .print("acting_agent: detected available role ", Role, " in org ", OrgName);
-    // Join the organization workspace
++availableRole(Role, OrgName) : org_name(OrgName) & group_name(GroupName) <-
+    .print("Role available: ", Role, " in organization ", OrgName);
+
+    // join and focus on organization workspace
     joinWorkspace(OrgName, WS);
     .print("acting_agent: joined workspace ", OrgName, " (id: ", WS, ")");
 
-    // Focus on OrgBoard
+    // focus on OrgBoard and GroupBoard
     lookupArtifact("orgBoard", OrgBoard)[wid(WS)];
     focus(OrgBoard);
-    .print("acting_agent: focused on OrgBoard ", OrgBoard);
-
-    // Focus on monitoring_team GroupBoard
-    lookupArtifact(GroupName, GB)[artifact_id(OrgBoard)];
+    lookupArtifact(GroupName, GB)[wid(WS)];
     focus(GB);
-    .print("acting_agent: focused on GroupBoard ", GB);
 
-    // Adopt the available role in the group
+    // adopt the role
+    .print("Trying to adopt role ", Role, " in group ", GroupName);
     adoptRole(Role)[artifact_id(GB)];
-    .print("acting_agent: adopted role ", Role, " in group ", GroupName).
+    .print("acting_agent: adopted role ", Role, " in group ", GroupName);
 
-/* Plan: manifest_temperature mission handler */
+    // obligations and trigger mission
+    .print("I am obliged to commit to temperature_manifesting_mission on ", SchemeName);
+    .print("I am obliged to achieve goal manifest_temperature on ", SchemeName);
+    !manifest_temperature.
+
+/* Plan: perform the manifest_temperature mission */
 @manifest_temperature_plan
 +!manifest_temperature : temperature(Celsius) & robot_td(Location) <-
-    .print("acting_agent: manifesting temperature = ", Celsius);
-    // Create converter artifact and convert the Celsius value
-    makeArtifact("converter", "tools.Converter", [], Conv)[artifact_id(Conv)];
-    convert(Celsius, -20.00, 20.00, 200.00, 830.00, Degrees)[artifact_id(Conv)];
-    .print("acting_agent: converted to Degrees = ", Degrees);
+    .print("I will manifest the temperature: ", Celsius);
 
-    // Create and use the robotic arm ThingArtifact
+    // convert Celsius to actuator degrees
+    makeArtifact("converter", "tools.Converter", [], Conv)[wid(WS)];
+    convert(Celsius, -20.00, 20.00, 200.00, 830.00, Degrees)[artifact_id(Conv)];
+    .print("Temperature Manifesting (moving robotic arm to): ", Degrees);
+
+    // invoke the robotic arm
     makeArtifact("leubot1", "org.hyperagents.jacamo.artifacts.wot.ThingArtifact", [Location, true], Leubot)[artifact_id(Conv)];
     invokeAction("https://ci.mines-stetienne.fr/kg/ontology#SetWristAngle", ["https://www.w3.org/2019/wot/json-schema#IntegerSchema"], [Degrees])[artifact_id(Leubot)].
 
-/* Include templates and org reasoning rules */
+/* Include boilerplate behavior */
 { include("$jacamoJar/templates/common-cartago.asl") }
 { include("$jacamoJar/templates/common-moise.asl") }
 { include("$moiseJar/asl/org-rules.asl") }
